@@ -62,7 +62,7 @@ app.get("/miner", async (req, res) => {
     console.log("Start Miner clicked:", clicked);
 
     // Small delay after click
-    await new Promise(r => setTimeout(r, 30000));
+    await new Promise(r => setTimeout(r, 50000));
 
     // Screenshot
     const screenshot = await page.screenshot({
