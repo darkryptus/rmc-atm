@@ -10,7 +10,11 @@ const PASSWORD = process.env.PASS;
 app.get("/miner", async (req, res) => {
   let browser;
 
+  console.log("⛏️ /miner route called");
+
   try {
+    console.log("🚀 Launching browser...");
+
     browser = await puppeteer.launch({
       headless: true,
       executablePath: "/opt/render/project/.render/chrome/opt/google/chrome/google-chrome",
@@ -24,59 +28,73 @@ app.get("/miner", async (req, res) => {
 
     const page = await browser.newPage();
 
+    console.log("🌐 Opening miner page...");
     await page.goto("https://rhinocoin.app/miner", {
       waitUntil: "networkidle2",
       timeout: 60000
     });
 
-    // Wait for login fields
+    console.log("⌛ Waiting for login fields...");
     await page.waitForSelector("#input-v-5", { timeout: 30000 });
 
-    // Fill credentials
+    console.log("🔑 Typing credentials...");
     await page.type("#input-v-5", EMAIL, { delay: 50 });
     await page.type("#input-v-8", PASSWORD, { delay: 50 });
 
-    // Submit with Enter
     await page.keyboard.press("Enter");
 
-    // Wait until page loads after login
+    console.log("✅ Login submitted");
+
     await page.waitForSelector("body");
 
-    // Wait until Start Miner text appears (max 15s)
+    console.log("🔍 Looking for Start Miner button...");
     await page.waitForFunction(() => {
       return [...document.querySelectorAll("span")]
         .some(el => el.textContent && el.textContent.includes("Start Miner"));
     }, { timeout: 15000 }).catch(() => {});
 
-    // OPTIONAL: click Start Miner if found
-    const clicked = await page.evaluate(() => {
+    await page.evaluate(() => {
       const span = [...document.querySelectorAll("span")]
         .find(el => el.textContent && el.textContent.includes("Start Miner"));
-      if (span) {
-        span.click();
-        return true;
-      }
-      return false;
+      if (span) span.click();
     });
 
-    console.log("Start Miner clicked:", clicked);
+    console.log("⏳ Waiting before screenshot...");
+    await new Promise(r => setTimeout(r, 5000));
 
-    // Small delay after click
-    await new Promise(r => setTimeout(r, 120 * 1000)); //min: 120 * 1000, max: 72 * 1000 * 1000
-
-    // Screenshot
+    console.log("📸 Taking screenshot...");
     const screenshot = await page.screenshot({
       type: "png",
       fullPage: true
     });
 
     await browser.close();
+    console.log("🛑 Browser closed");
 
-    res.set("Content-Type", "image/png");
-    res.send(screenshot);
+    // ======================
+    // Upload to server
+    // ======================
+
+    console.log("📤 Uploading screenshot...");
+
+    const formData = new FormData();
+    const blob = new Blob([screenshot], { type: "image/png" });
+
+    formData.append("image", blob, "miner.png");
+
+    const uploadResponse = await fetch("https://baths-jungle-speaker-welcome.trycloudflare.com/upload", {
+      method: "POST",
+      body: formData
+    });
+
+    const text = await uploadResponse.text();
+
+    console.log("📨 Upload response:", text);
+
+    res.send("✅ Miner completed & uploaded");
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ Miner error:", err);
 
     if (browser) await browser.close();
 
@@ -85,5 +103,5 @@ app.get("/miner", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running: http://localhost:${PORT}/miner`);
+  console.log(`🚀 Miner server running: http://localhost:${PORT}/miner`);
 });
