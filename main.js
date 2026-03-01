@@ -4,6 +4,12 @@ const puppeteer = require("puppeteer-core");
 const app = express();
 const PORT = 3000;
 
+// test route
+app.get('/', (req, res) => {
+  console.log("🌐 Root / called");
+  res.send("hey");
+});
+
 const EMAIL = "ronicyt69@gmail.com";
 const PASSWORD = process.env.PASS;
 
