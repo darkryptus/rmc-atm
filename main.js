@@ -60,7 +60,7 @@ app.get("/miner", async (req, res) => {
     });
 
     console.log("⏳ Waiting before screenshot...");
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 120 * 1000));
 
     console.log("📸 Taking screenshot...");
     const screenshot = await page.screenshot({
