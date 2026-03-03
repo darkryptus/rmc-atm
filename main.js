@@ -4,26 +4,26 @@ const puppeteer = require("puppeteer-core");
 const app = express();
 const PORT = 3000;
 
-// test route
-app.get('/', (req, res) => {
-  console.log("🌐 Root / called");
-  res.send("hey");
-});
-
 const EMAIL = "ronicyt69@gmail.com";
 const PASSWORD = process.env.PASS;
 
-app.get("/miner", async (req, res) => {
-  let browser;
+// 🔴 PUT YOUR DISCORD WEBHOOK HERE
+const WEBHOOK_URL = "https://discord.com/api/webhooks/1478312188358955050/2EvRjowjV8W5JFXw-TQ6WK-agI41AIRMlx1J4adCfxha__9DX6PcH_z0J3FE269G0ITd";
 
-  console.log("⛏️ /miner route called");
+let browser = null;
+let page = null;
 
+// ==========================
+// Miner Function
+// ==========================
+async function startMiner() {
   try {
     console.log("🚀 Launching browser...");
 
     browser = await puppeteer.launch({
       headless: true,
-      executablePath: "/opt/render/project/.render/chrome/opt/google/chrome/google-chrome",
+      executablePath:
+        "/opt/render/project/.render/chrome/opt/google/chrome/google-chrome",
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -32,7 +32,7 @@ app.get("/miner", async (req, res) => {
       ]
     });
 
-    const page = await browser.newPage();
+    page = await browser.newPage();
 
     console.log("🌐 Opening miner page...");
     await page.goto("https://rhinocoin.app/miner", {
@@ -40,7 +40,7 @@ app.get("/miner", async (req, res) => {
       timeout: 60000
     });
 
-    console.log("⌛ Waiting for login fields...");
+    console.log("⌛ Waiting for login...");
     await page.waitForSelector("#input-v-5", { timeout: 30000 });
 
     console.log("🔑 Typing credentials...");
@@ -65,49 +65,61 @@ app.get("/miner", async (req, res) => {
       if (span) span.click();
     });
 
-    console.log("⏳ Waiting before screenshot...");
-    await new Promise(r => setTimeout(r, 72 * 60 * 60 * 1000));
+    console.log("✅ Miner started");
 
-    console.log("📸 Taking screenshot...");
-    const screenshot = await page.screenshot({
-      type: "png",
-      fullPage: true
-    });
+    // ========================
+    // Screenshot loop every 5 mins
+    // ========================
+    setInterval(async () => {
+      try {
+        console.log("📸 Taking screenshot...");
 
-    await browser.close();
-    console.log("🛑 Browser closed");
+        const screenshot = await page.screenshot({
+          type: "png",
+          fullPage: true
+        });
 
-    // ======================
-    // Upload to server
-    // ======================
+        console.log("📤 Sending to Discord...");
 
-    console.log("📤 Uploading screenshot...");
+        const formData = new FormData();
+        const blob = new Blob([screenshot], { type: "image/png" });
 
-    const formData = new FormData();
-    const blob = new Blob([screenshot], { type: "image/png" });
+        formData.append("file", blob, "miner.png");
+        formData.append(
+          "content",
+          `📊 Miner Screenshot\n🕒 ${new Date().toLocaleString()}`
+        );
 
-    formData.append("image", blob, "miner.png");
+        await fetch(WEBHOOK_URL, {
+          method: "POST",
+          body: formData
+        });
 
-    const uploadResponse = await fetch("https://baths-jungle-speaker-welcome.trycloudflare.com/upload", {
-      method: "POST",
-      body: formData
-    });
+        console.log("✅ Sent to Discord");
 
-    const text = await uploadResponse.text();
-
-    console.log("📨 Upload response:", text);
-
-    res.send("✅ Miner completed & uploaded");
+      } catch (err) {
+        console.error("❌ Screenshot error:", err);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
 
   } catch (err) {
-    console.error("❌ Miner error:", err);
-
-    if (browser) await browser.close();
-
-    res.status(500).send("Error: " + err.message);
+    console.error("❌ Miner startup error:", err);
   }
+}
+
+// ==========================
+// Routes
+// ==========================
+app.get("/", (req, res) => {
+  res.send("✅ Miner running");
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Miner server running: http://localhost:${PORT}/miner`);
+// ==========================
+// Start server + miner
+// ==========================
+app.listen(PORT, async () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+
+  // Auto start miner
+  await startMiner();
 });
