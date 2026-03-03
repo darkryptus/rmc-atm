@@ -1,5 +1,7 @@
 const express = require("express");
 const puppeteer = require("puppeteer-core");
+const fetch = require("node-fetch");
+const FormData = require("form-data");
 
 const app = express();
 const PORT = 3000;
@@ -7,14 +9,14 @@ const PORT = 3000;
 const EMAIL = "ronicyt69@gmail.com";
 const PASSWORD = process.env.PASS;
 
-// 🔴 PUT YOUR DISCORD WEBHOOK HERE
+// 🔴 PUT YOUR REAL WEBHOOK URL HERE
 const WEBHOOK_URL = "https://discord.com/api/webhooks/1478312188358955050/2EvRjowjV8W5JFXw-TQ6WK-agI41AIRMlx1J4adCfxha__9DX6PcH_z0J3FE269G0ITd";
 
-let browser = null;
-let page = null;
+let browser;
+let page;
 
 // ==========================
-// Miner Function
+// Start Miner
 // ==========================
 async function startMiner() {
   try {
@@ -53,7 +55,7 @@ async function startMiner() {
 
     await page.waitForSelector("body");
 
-    console.log("🔍 Looking for Start Miner button...");
+    console.log("🔍 Clicking Start Miner...");
     await page.waitForFunction(() => {
       return [...document.querySelectorAll("span")]
         .some(el => el.textContent && el.textContent.includes("Start Miner"));
@@ -68,7 +70,7 @@ async function startMiner() {
     console.log("✅ Miner started");
 
     // ========================
-    // Screenshot loop every 5 mins
+    // Screenshot Loop (5 mins)
     // ========================
     setInterval(async () => {
       try {
@@ -79,28 +81,38 @@ async function startMiner() {
           fullPage: true
         });
 
-        console.log("📤 Sending to Discord...");
+        const form = new FormData();
 
-        const formData = new FormData();
-        const blob = new Blob([screenshot], { type: "image/png" });
-
-        formData.append("file", blob, "miner.png");
-        formData.append(
-          "content",
-          `📊 Miner Screenshot\n🕒 ${new Date().toLocaleString()}`
-        );
-
-        await fetch(WEBHOOK_URL, {
-          method: "POST",
-          body: formData
+        form.append("file", screenshot, {
+          filename: "miner.png",
+          contentType: "image/png"
         });
 
-        console.log("✅ Sent to Discord");
+        form.append(
+          "payload_json",
+          JSON.stringify({
+            content: `📊 Miner Screenshot\n🕒 ${new Date().toLocaleString()}`
+          })
+        );
+
+        const response = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          body: form,
+          headers: form.getHeaders()
+        });
+
+        console.log("Discord status:", response.status);
+
+        if (response.status !== 204) {
+          console.log("Discord error:", await response.text());
+        } else {
+          console.log("✅ Screenshot sent to Discord");
+        }
 
       } catch (err) {
         console.error("❌ Screenshot error:", err);
       }
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 5 * 60 * 1000);
 
   } catch (err) {
     console.error("❌ Miner startup error:", err);
@@ -108,18 +120,16 @@ async function startMiner() {
 }
 
 // ==========================
-// Routes
+// Route
 // ==========================
 app.get("/", (req, res) => {
   res.send("✅ Miner running");
 });
 
 // ==========================
-// Start server + miner
+// Start Server + Miner
 // ==========================
 app.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
-
-  // Auto start miner
   await startMiner();
 });
