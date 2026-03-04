@@ -1,9 +1,5 @@
 const express = require("express");
 const puppeteer = require("puppeteer-core");
-const fetch = require("node-fetch");
-const FormData = require("form-data");
-
-const cloudflare = "https://voting-cathedral-path-asks.trycloudflare.com";
 
 const app = express();
 const PORT = 3000;
@@ -75,62 +71,6 @@ async function startMiner() {
     });
 
     console.log("⛏️ Miner started");
-
-    // =========================
-    // RANDOM START DELAY
-    // =========================
-
-    const randomDelay = Math.floor(Math.random() * 300000);
-
-    console.log(
-      `🎲 Random start delay: ${Math.round(randomDelay / 1000)} seconds`
-    );
-
-    setTimeout(() => {
-
-      console.log("📸 Screenshot loop started");
-
-      setInterval(async () => {
-
-        try {
-
-          console.log("📸 Taking screenshot");
-
-          const screenshot = await page.screenshot({
-            type: "png",
-            fullPage: true
-          });
-
-          const formData = new FormData();
-
-          formData.append("image", screenshot, {
-            filename: "miner.png",
-            contentType: "image/png"
-          });
-
-          console.log("📤 Uploading screenshot");
-
-          const uploadResponse = await fetch(
-            `${cloudflare}/upload`,
-            {
-              method: "POST",
-              body: formData
-            }
-          );
-
-          const text = await uploadResponse.text();
-
-          console.log("📨 Upload response:", text);
-
-        } catch (err) {
-
-          console.log("⚠️ Screenshot error:", err.message);
-
-        }
-
-      }, 5 * 60 * 1000);
-
-    }, randomDelay);
 
   } catch (err) {
 
