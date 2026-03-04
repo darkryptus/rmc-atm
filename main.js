@@ -61,7 +61,7 @@ async function startMiner() {
 
     console.log("✅ Login submitted");
 
-    await page.waitForTimeout(5000);
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     console.log("🔍 Searching Start Miner button");
 
