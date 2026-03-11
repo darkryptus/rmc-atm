@@ -89,4 +89,4 @@ app.listen(PORT, async () => {
   startMiner();
 
 });
-//manual auto deploy trigger commit 2
+//manual auto deploy trigger commit 3
