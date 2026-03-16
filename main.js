@@ -9,96 +9,146 @@ const PASSWORD = process.env.PASS;
 
 let browser;
 let page;
+let refreshInterval;
 
 // health route
 app.get("/", (req, res) => {
   res.send("server running");
 });
 
-async function startMiner() {
+async function launchBrowser() {
+  console.log("🚀 Launching browser");
 
-  console.log("⛏️ Starting miner...");
+  browser = await puppeteer.launch({
+    headless: true,
+    executablePath:
+      "/opt/render/project/.render/chrome/opt/google/chrome/google-chrome",
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu"
+    ]
+  });
+
+  page = await browser.newPage();
+}
+
+async function login() {
+  console.log("🌐 Opening task page");
+
+  await page.goto("https://rhinocoin.app/miner", {
+    waitUntil: "networkidle2",
+    timeout: 60000
+  });
+
+  console.log("⌛ Waiting for login");
+
+  await page.waitForSelector("#input-v-5", { timeout: 60000 });
+  await page.waitForSelector("#input-v-8", { timeout: 60000 });
+
+  console.log("🔑 Typing credentials");
+
+  await page.type("#input-v-5", EMAIL, { delay: 50 });
+  await page.type("#input-v-8", PASSWORD, { delay: 50 });
+
+  await page.keyboard.press("Enter");
+
+  console.log("✅ Login submitted");
+
+  await page.waitForTimeout(5000);
+}
+
+async function runPostLoginSteps() {
+  console.log("▶ Running post-login steps");
 
   try {
+    // Open dropdown
+    await page.waitForSelector('[data-v-b0d2f4e7] button.v-btn--icon', {
+      visible: true,
+      timeout: 30000
+    });
+    await page.click('[data-v-b0d2f4e7] button.v-btn--icon');
 
-    console.log("🚀 Launching browser");
+    // Select option
+    await page.waitForSelector("#input-v-65", {
+      visible: true,
+      timeout: 30000
+    });
+    await page.click("#input-v-65");
 
-    browser = await puppeteer.launch({
-      headless: true,
-      executablePath:
-        "/opt/render/project/.render/chrome/opt/google/chrome/google-chrome",
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu"
-      ]
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+
+    // Toggle switch
+    await page.waitForSelector("#switch-v-53", {
+      visible: true,
+      timeout: 30000
+    });
+    await page.click("#switch-v-53");
+
+    console.log("🔍 Searching Start button");
+
+    await page.evaluate(() => {
+      const span = [...document.querySelectorAll("span")].find(
+        (el) => el.textContent && el.textContent.includes("Start Miner")
+      );
+
+      if (span) {
+        span.click();
+      } else {
+        throw new Error("Start button not found");
+      }
     });
 
-    page = await browser.newPage();
+    console.log("⛏️ Task started");
+  } catch (err) {
+    console.log("❌ Post-login step error:", err);
+    throw err;
+  }
+}
 
-    console.log("🌐 Opening miner page");
+async function refreshAndRepeat() {
+  try {
+    console.log("🔄 Refreshing page...");
 
-    await page.goto("https://rhinocoin.app/miner", {
+    await page.reload({
       waitUntil: "networkidle2",
       timeout: 60000
     });
 
-    console.log("⌛ Waiting for login");
+    await page.waitForTimeout(5000);
 
-    await page.waitForSelector("#input-v-5");
+    await runPostLoginSteps();
 
-    console.log("🔑 Typing credentials");
+    console.log("✅ Refresh cycle completed");
+  } catch (err) {
+    console.log("❌ Refresh cycle failed:", err);
+  }
+}
 
-    await page.type("#input-v-5", EMAIL, { delay: 50 });
-    await page.type("#input-v-8", PASSWORD, { delay: 50 });
+async function startTask() {
+  console.log("⛏️ Starting task...");
 
-    await page.keyboard.press("Enter");
+  try {
+    await launchBrowser();
+    await login();
+    await runPostLoginSteps();
 
-    console.log("✅ Login submitted");
-
-    await new Promise(resolve => setTimeout(resolve, 5000));
-
-//    await page.locator('button:has(i.mdi-chevron-down)').click();
-
-await page.locator('[data-v-b0d2f4e7] button.v-btn--icon').click();
-
-await page.waitForSelector('#input-v-65', { visible: true });
-await page.click('#input-v-65');
-
-await page.keyboard.press('ArrowDown');
-await page.keyboard.press('ArrowDown');
-await page.keyboard.press('Enter');
-    await page.click('#switch-v-53');
-
-    console.log("🔍 Searching Start Miner button");
-
-    await page.evaluate(() => {
-
-      const span = [...document.querySelectorAll("span")]
-        .find(el => el.textContent && el.textContent.includes("Start Miner"));
-
-      if (span) span.click();
-
-    });
-
-    console.log("⛏️ Miner started");
+    refreshInterval = setInterval(async () => {
+      await refreshAndRepeat();
+    }, 10 * 60 * 1000);
 
   } catch (err) {
+    console.log("❌ Task error:", err);
 
-    console.log("❌ Miner error:", err);
-
+    if (refreshInterval) clearInterval(refreshInterval);
     if (browser) await browser.close();
-
   }
 }
 
 app.listen(PORT, async () => {
-
   console.log(`🚀 Server running on port ${PORT}`);
-
-  // start miner automatically
-  startMiner();
-
+  startTask();
 });
-//manual auto deploy trigger commit 6
