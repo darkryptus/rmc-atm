@@ -24,7 +24,7 @@ async function startMiner() {
     console.log("🚀 Launching browser");
 
     browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       executablePath:
         "/opt/render/project/.render/chrome/opt/google/chrome/google-chrome",
       args: [
