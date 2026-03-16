@@ -11,6 +11,8 @@ let browser;
 let page;
 let refreshInterval;
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // health route
 app.get("/", (req, res) => {
   res.send("server running");
@@ -56,21 +58,19 @@ async function login() {
 
   console.log("✅ Login submitted");
 
-  await page.waitForTimeout(5000);
+  await sleep(5000);
 }
 
 async function runPostLoginSteps() {
   console.log("▶ Running post-login steps");
 
   try {
-    // Open dropdown
     await page.waitForSelector('[data-v-b0d2f4e7] button.v-btn--icon', {
       visible: true,
       timeout: 30000
     });
     await page.click('[data-v-b0d2f4e7] button.v-btn--icon');
 
-    // Select option
     await page.waitForSelector("#input-v-65", {
       visible: true,
       timeout: 30000
@@ -81,7 +81,6 @@ async function runPostLoginSteps() {
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
 
-    // Toggle switch
     await page.waitForSelector("#switch-v-53", {
       visible: true,
       timeout: 30000
@@ -118,7 +117,7 @@ async function refreshAndRepeat() {
       timeout: 60000
     });
 
-    await page.waitForTimeout(5000);
+    await sleep(5000);
 
     await runPostLoginSteps();
 
@@ -139,7 +138,6 @@ async function startTask() {
     refreshInterval = setInterval(async () => {
       await refreshAndRepeat();
     }, 10 * 60 * 1000);
-
   } catch (err) {
     console.log("❌ Task error:", err);
 
