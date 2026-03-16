@@ -69,6 +69,7 @@ await page.click('#input-v-65');
 await page.keyboard.press('ArrowDown');
 await page.keyboard.press('ArrowDown');
 await page.keyboard.press('Enter');
+    await page.click('#switch-v-53');
 
     console.log("🔍 Searching Start Miner button");
 
