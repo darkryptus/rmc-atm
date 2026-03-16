@@ -24,7 +24,7 @@ async function startMiner() {
     console.log("🚀 Launching browser");
 
     browser = await puppeteer.launch({
-      headless: true,
+      headless: false,
       executablePath:
         "/opt/render/project/.render/chrome/opt/google/chrome/google-chrome",
       args: [
@@ -59,6 +59,17 @@ async function startMiner() {
 
     await new Promise(resolve => setTimeout(resolve, 5000));
 
+//    await page.locator('button:has(i.mdi-chevron-down)').click();
+
+await page.locator('[data-v-b0d2f4e7] button.v-btn--icon').click();
+
+await page.waitForSelector('#input-v-65', { visible: true });
+await page.click('#input-v-65');
+
+await page.keyboard.press('ArrowDown');
+await page.keyboard.press('ArrowDown');
+await page.keyboard.press('Enter');
+
     console.log("🔍 Searching Start Miner button");
 
     await page.evaluate(() => {
@@ -89,4 +100,4 @@ app.listen(PORT, async () => {
   startMiner();
 
 });
-//manual auto deploy trigger commit 4
+//manual auto deploy trigger commit 4 
